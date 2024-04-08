@@ -1,10 +1,18 @@
 from django.urls import path
-from .views import FollowCreateView, GroupList, GroupCreate, ListCreateCommentsView, CommentDetailView
+from .views import FollowCreateView, GroupList, GroupCreate, ListCreateCommentsView, CommentDetailView, FollowListView, PostListView, PostDetailView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+
 
 urlpatterns = [
     path('v1/follow/', FollowCreateView.as_view(), name='v1-follow-listcreate'),
+    path('api/v1/follow/', FollowListView.as_view(), name='follow-list'),
     path('v1/groups/', GroupList.as_view(), name='v1-group-list'),
     path('v1/groups/create/', GroupCreate.as_view(), name='v1-group-create'),
     path('v1/posts/<int:post_id>/comments/', ListCreateCommentsView.as_view(), name='v1-comment-list-create'),
     path('v1/posts/<int:post_id>/comments/<int:pk>/', CommentDetailView.as_view(), name='v1-comment-detail'),
+    path('v1/jwt/create/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('v1/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('v1/jwt/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/v1/posts/', PostListView.as_view(), name='post-list'),
+    path('api/v1/posts/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
 ]

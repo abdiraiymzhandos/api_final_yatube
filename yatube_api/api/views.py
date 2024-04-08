@@ -1,11 +1,13 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from posts.models import Follow, Group
-from .serializers import FollowSerializer, GroupSerializer
+from .serializers import FollowSerializer, GroupSerializer, PostSerializer
 from posts.models import Comment, Post, Follow, Group
 from .serializers import CommentSerializer
 from django.shortcuts import get_object_or_404
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+
 
 class FollowListView(generics.ListAPIView):
     serializer_class = FollowSerializer
@@ -19,17 +21,21 @@ class FollowCreateView(generics.CreateAPIView):
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    def perform_create(self, serializer):
+        # Access the currently authenticated user from the request
+        user = self.request.user
         following = serializer.validated_data['following']
-        if following == request.user:
-            return Response({"error": "Нельзя подписаться на самого себя!"}, status=status.HTTP_400_BAD_REQUEST)
-        elif Follow.objects.filter(user=request.user, following=following).exists():
-            return Response({"error": "Вы уже подписаны на этого пользователя."}, status=status.HTTP_400_BAD_REQUEST)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+        # Check if the user is trying to follow themselves
+        if following == user:
+            raise serializers.ValidationError({"error": "Нельзя подписаться на самого себя!"})
+        
+        # Check if the follow relationship already exists
+        if Follow.objects.filter(user=user, following=following).exists():
+            raise serializers.ValidationError({"error": "Вы уже подписаны на этого пользователя."})
+        
+        # If the checks pass, save the Follow instance with the current user set as the follower
+        serializer.save(user=user)
 
 
 class GroupList(generics.ListAPIView):
@@ -85,3 +91,16 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
         if comment.author != request.user:
             return Response({"error": "You can only delete your own comments."}, status=status.HTTP_403_FORBIDDEN)
         return super().delete(request, *args, **kwargs)
+
+
+class PostListView(ListCreateAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class PostDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
