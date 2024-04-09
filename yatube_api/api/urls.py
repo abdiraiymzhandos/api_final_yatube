@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import FollowCreateView, GroupList, GroupCreate, ListCreateCommentsView, CommentDetailView, FollowListView, PostListView, PostDetailView
+from .views import CommentDetailView, FollowListView, PostListView, PostDetailView
+from .views import FollowCreateView, GroupList, GroupCreate, ListCreateCommentsView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
 
@@ -13,6 +14,6 @@ urlpatterns = [
     path('v1/jwt/create/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('v1/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('v1/jwt/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    path('api/v1/posts/', PostListView.as_view(), name='post-list'),
-    path('api/v1/posts/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
+    path('v1/posts/', PostListView.as_view(), name='post-list'),
+    path('v1/posts/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
 ]
