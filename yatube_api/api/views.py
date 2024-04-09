@@ -7,20 +7,23 @@ from posts.models import Comment, Post, Follow, Group
 from .serializers import CommentSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from .permissions import IsAuthorOrReadOnly
 
 
-class FollowListView(generics.ListAPIView):
+class FollowListView(generics.ListAPIView, generics.CreateAPIView):
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
-        return Follow.objects.filter(user=user)
-
-class FollowCreateView(generics.CreateAPIView):
-    serializer_class = FollowSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+        queryset = Follow.objects.filter(user=user)
+        search_username = self.request.query_params.get('search', None)
+        if search_username:
+            # Filter the queryset based on the username of the following user
+            queryset = queryset.filter(following__username=search_username)
+        return queryset
+    
     def perform_create(self, serializer):
         # Access the currently authenticated user from the request
         user = self.request.user
@@ -42,16 +45,24 @@ class GroupList(generics.ListAPIView):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = None
 
 class GroupCreate(generics.CreateAPIView):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+class GroupDetailView(generics.RetrieveAPIView):
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
 
 class ListCreateCommentsView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = None
 
     def get_queryset(self):
         """
@@ -69,6 +80,7 @@ class ListCreateCommentsView(generics.ListCreateAPIView):
         post_id = self.kwargs.get('post_id')
         post = get_object_or_404(Post, id=post_id)  # Ensure the post exists
         serializer.save(author=self.request.user, post=post)
+
 
 class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
@@ -96,6 +108,8 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
 class PostListView(ListCreateAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    # pagination_class = None
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -104,3 +118,4 @@ class PostListView(ListCreateAPIView):
 class PostDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    permission_classes = [IsAuthorOrReadOnly]
