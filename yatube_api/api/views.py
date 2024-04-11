@@ -1,4 +1,5 @@
 from rest_framework import generics, permissions, status, serializers
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from posts.models import Follow, Group
@@ -110,6 +111,9 @@ class PostListView(ListCreateAPIView):
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     # pagination_class = None
+    pagination_class = LimitOffsetPagination
+
+    ordering_fields = ('-pub_date')
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
