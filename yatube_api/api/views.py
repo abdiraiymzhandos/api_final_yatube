@@ -1,13 +1,16 @@
 from rest_framework import generics, permissions, status, serializers
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
-from django.contrib.auth.models import User
-from posts.models import Follow, Group
-from .serializers import FollowSerializer, GroupSerializer, PostSerializer
-from posts.models import Comment, Post, Follow, Group
-from .serializers import CommentSerializer
+from rest_framework.generics import (ListCreateAPIView,
+                                     RetrieveUpdateDestroyAPIView)
+
 from django.shortcuts import get_object_or_404
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+
+from .serializers import FollowSerializer, GroupSerializer, PostSerializer
+from .serializers import CommentSerializer
 from .permissions import IsAuthorOrReadOnly
+
+from posts.models import Comment, Post, Follow, Group
 
 
 class FollowListView(generics.ListAPIView, generics.CreateAPIView):
@@ -23,21 +26,22 @@ class FollowListView(generics.ListAPIView, generics.CreateAPIView):
             # Filter the queryset based on the username of the following user
             queryset = queryset.filter(following__username=search_username)
         return queryset
-    
+
     def perform_create(self, serializer):
         # Access the currently authenticated user from the request
         user = self.request.user
         following = serializer.validated_data['following']
-        
+
         # Check if the user is trying to follow themselves
         if following == user:
-            raise serializers.ValidationError({"error": "Нельзя подписаться на самого себя!"})
-        
+            raise serializers.ValidationError(
+                {"error": "Нельзя подписаться на самого себя!"})
+
         # Check if the follow relationship already exists
         if Follow.objects.filter(user=user, following=following).exists():
-            raise serializers.ValidationError({"error": "Вы уже подписаны на этого пользователя."})
-        
-        # If the checks pass, save the Follow instance with the current user set as the follower
+            raise serializers.ValidationError(
+                {"error": "Вы уже подписаны на этого пользователя."})
+
         serializer.save(user=user)
 
 
@@ -47,16 +51,17 @@ class GroupList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     pagination_class = None
 
+
 class GroupCreate(generics.CreateAPIView):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
 class GroupDetailView(generics.RetrieveAPIView):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-
 
 
 class ListCreateCommentsView(generics.ListCreateAPIView):
@@ -65,18 +70,10 @@ class ListCreateCommentsView(generics.ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        """
-        This view returns a list of all comments for
-        the post as determined by the post_id portion of the URL.
-        """
         post_id = self.kwargs.get('post_id')
         return Comment.objects.filter(post=post_id)
 
     def perform_create(self, serializer):
-        """
-        Override perform_create to associate the comment with the correct post
-        using the post_id URL parameter and to set the comment's author to the current user.
-        """
         post_id = self.kwargs.get('post_id')
         post = get_object_or_404(Post, id=post_id)  # Ensure the post exists
         serializer.save(author=self.request.user, post=post)
@@ -88,10 +85,6 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        """
-        This view should return a list of all comments for
-        the comment as determined by the post_id portion of the URL.
-        """
         post_id = self.kwargs['post_id']
         return Comment.objects.filter(post_id=post_id)
 
@@ -101,7 +94,9 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     def delete(self, request, *args, **kwargs):
         comment = self.get_object()
         if comment.author != request.user:
-            return Response({"error": "You can only delete your own comments."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You can only delete your own comments."},
+                status=status.HTTP_403_FORBIDDEN)
         return super().delete(request, *args, **kwargs)
 
 
@@ -109,7 +104,9 @@ class PostListView(ListCreateAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    # pagination_class = None
+    pagination_class = LimitOffsetPagination
+
+    ordering_fields = ('-pub_date')
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
