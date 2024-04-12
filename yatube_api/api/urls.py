@@ -21,7 +21,6 @@ v1_urlpatterns = [
          name='v1-comment-detail'),
     path('posts/', PostListView.as_view(), name='post-list'),
     path('posts/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
-#     path('jwt/', include('djoser.urls.jwt')), IT DOES NOT WORK
     path('jwt/create/',
          TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -32,3 +31,5 @@ v1_urlpatterns = [
 urlpatterns = [
     path('v1/', include((v1_urlpatterns, 'api'), namespace='v1')),
 ]
+
+# path('jwt/', include('djoser.urls.jwt')), IT DOES NOT WORK
