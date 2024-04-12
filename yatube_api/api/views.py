@@ -1,34 +1,25 @@
-from rest_framework import generics, permissions, status, serializers
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, permissions, status, serializers, filters
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.generics import (ListCreateAPIView,
                                      RetrieveUpdateDestroyAPIView)
 
-from django.shortcuts import get_object_or_404
-
 from .serializers import FollowSerializer, GroupSerializer, PostSerializer
 from .serializers import CommentSerializer
 from .permissions import IsAuthorOrReadOnly
-
 from posts.models import Comment, Post, Follow, Group
 
 
 class FollowListView(generics.ListAPIView, generics.CreateAPIView):
     serializer_class = FollowSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['following__username']
 
     def get_queryset(self):
-        user = self.request.user
-        queryset = Follow.objects.filter(user=user)
-        search_username = self.request.query_params.get('search', None)
-        if search_username:
-            # Filter the queryset based on the username of the following user
-            queryset = queryset.filter(following__username=search_username)
-        return queryset
+        return self.request.user.follows.all()
 
     def perform_create(self, serializer):
-        # Access the currently authenticated user from the request
         user = self.request.user
         following = serializer.validated_data['following']
 
@@ -43,6 +34,15 @@ class FollowListView(generics.ListAPIView, generics.CreateAPIView):
                 {"error": "Вы уже подписаны на этого пользователя."})
 
         serializer.save(user=user)
+
+
+# class FollowListView(generics.ListAPIView, generics.CreateAPIView):
+#     serializer_class = FollowSerializer
+#     filter_backends = [filters.SearchFilter]
+#     search_fields = ['following__username']
+
+#     def get_queryset(self):
+#         return self.request.user.follows.all()
 
 
 class GroupList(generics.ListAPIView):
@@ -75,7 +75,7 @@ class ListCreateCommentsView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, id=post_id)  # Ensure the post exists
+        post = get_object_or_404(Post, id=post_id)
         serializer.save(author=self.request.user, post=post)
 
 
