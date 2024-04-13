@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status, serializers, filters
+from rest_framework import generics, permissions, status, filters
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.generics import (ListCreateAPIView,
@@ -8,7 +8,7 @@ from rest_framework.generics import (ListCreateAPIView,
 from .serializers import FollowSerializer, GroupSerializer, PostSerializer
 from .serializers import CommentSerializer
 from .permissions import IsAuthorOrReadOnly
-from posts.models import Comment, Post, Follow, Group
+from posts.models import Comment, Post, Group
 
 
 class FollowListView(generics.ListAPIView, generics.CreateAPIView):
@@ -19,30 +19,23 @@ class FollowListView(generics.ListAPIView, generics.CreateAPIView):
     def get_queryset(self):
         return self.request.user.follows.all()
 
+
+class PostListView(ListCreateAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = LimitOffsetPagination
+
+    ordering_fields = ('-pub_date')
+
     def perform_create(self, serializer):
-        user = self.request.user
-        following = serializer.validated_data['following']
-
-        # Check if the user is trying to follow themselves
-        if following == user:
-            raise serializers.ValidationError(
-                {"error": "Нельзя подписаться на самого себя!"})
-
-        # Check if the follow relationship already exists
-        if Follow.objects.filter(user=user, following=following).exists():
-            raise serializers.ValidationError(
-                {"error": "Вы уже подписаны на этого пользователя."})
-
-        serializer.save(user=user)
+        serializer.save(author=self.request.user)
 
 
-# class FollowListView(generics.ListAPIView, generics.CreateAPIView):
-#     serializer_class = FollowSerializer
-#     filter_backends = [filters.SearchFilter]
-#     search_fields = ['following__username']
-
-#     def get_queryset(self):
-#         return self.request.user.follows.all()
+class PostDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    permission_classes = [IsAuthorOrReadOnly]
 
 
 class GroupList(generics.ListAPIView):
@@ -99,20 +92,3 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
                 status=status.HTTP_403_FORBIDDEN)
         return super().delete(request, *args, **kwargs)
 
-
-class PostListView(ListCreateAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    pagination_class = LimitOffsetPagination
-
-    ordering_fields = ('-pub_date')
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
-
-
-class PostDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    permission_classes = [IsAuthorOrReadOnly]
