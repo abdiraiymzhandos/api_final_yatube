@@ -7,7 +7,7 @@ from rest_framework.generics import (ListCreateAPIView,
 
 from .serializers import FollowSerializer, GroupSerializer, PostSerializer
 from .serializers import CommentSerializer
-from .permissions import IsAuthorOrReadOnly
+from .permissions import IsAuthorOrReadOnly, IsAdminOrReadOnly
 from posts.models import Comment, Post, Group
 
 
@@ -48,13 +48,13 @@ class GroupList(generics.ListAPIView):
 class GroupCreate(generics.CreateAPIView):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class GroupDetailView(generics.RetrieveAPIView):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class ListCreateCommentsView(generics.ListCreateAPIView):
@@ -91,4 +91,3 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
                 {"error": "You can only delete your own comments."},
                 status=status.HTTP_403_FORBIDDEN)
         return super().delete(request, *args, **kwargs)
-
