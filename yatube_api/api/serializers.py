@@ -1,26 +1,48 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueTogetherValidator
 
-from posts.models import Comment, Post, Follow, Group, User
+from posts.models import Comment, Post, Follow, Group
 
 User = get_user_model()
 
 
-class PostSerializer(serializers.ModelSerializer):
-    author = SlugRelatedField(slug_field='username', read_only=True)
+class GroupSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Group."""
 
     class Meta:
-        fields = ('id', 'text', 'pub_date', 'author', 'image', 'group')
+        """Внутренний класс для определения настроек сериализатора модели."""
+
+        model = Group
+        fields = ('id', 'title', 'slug', 'description')
+
+
+class PostSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Post."""
+
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True
+    )
+
+    class Meta:
+        """Внутренний класс для определения настроек сериализатора модели."""
+
         model = Post
+        fields = ('id', 'text', 'pub_date', 'author', 'image', 'group')
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Comment."""
+
     author = serializers.SlugRelatedField(
-        slug_field='username', read_only=True)
+        slug_field='username',
+        read_only=True
+    )
 
     class Meta:
+        """Внутренний класс для определения настроек сериализатора модели."""
+
         model = Comment
         fields = ('id', 'author', 'post', 'text', 'created')
         read_only_fields = ('author', 'post')
@@ -54,9 +76,3 @@ class FollowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Нельзя подписаться на самого себя!")
         return value
-
-
-class GroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ('id', 'title', 'slug', 'description')
